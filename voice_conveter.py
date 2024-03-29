@@ -4,11 +4,6 @@ from faster_whisper import WhisperModel
 # choices: base, small, medium, large-v3
 model_size = os.environ.get('MODEL_SIZE', 'base')
 
-model_size = "base"
-#model_size = "small"
-#model_size = "medium"
-#model_size = "large-v3"
-
 # Run on GPU with FP16
 # model = WhisperModel(model_size, device="cuda", compute_type="float16")
 
