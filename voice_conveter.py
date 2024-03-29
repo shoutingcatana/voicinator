@@ -1,4 +1,8 @@
+import os
 from faster_whisper import WhisperModel
+
+# choices: base, small, medium, large-v3
+model_size = os.environ.get('MODEL_SIZE', 'base')
 
 model_size = "base"
 #model_size = "small"
