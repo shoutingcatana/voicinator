@@ -3,7 +3,11 @@ import tempfile
 import telebot
 import voice_conveter
 
+
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+if not BOT_TOKEN:
+    with open("token") as file:
+        BOT_TOKEN = file.read()
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -28,6 +32,7 @@ def voice_processing(message):
         voice_file.seek(0)
         output_text = voice_conveter.transcribe(str(voice_file.name))
     bot.reply_to(message, output_text)
+
 
 print("ready to read messages")
 bot.infinity_polling()
