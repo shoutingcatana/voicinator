@@ -2,6 +2,8 @@ import os
 import tempfile
 import telebot
 import voice_conveter
+import summarize
+# from pydub.utils import mediainfo
 
 
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
@@ -30,7 +32,20 @@ def voice_processing(message):
     with tempfile.NamedTemporaryFile(mode='wb', delete=False) as voice_file:
         voice_file.write(downloaded_bytes)
         voice_file.seek(0)
-        output_text = voice_conveter.transcribe(str(voice_file.name))
+
+        # does not work because of wrong format
+        # info = mediainfo(voice_file.name)
+        # duration_ms = info.get('duration', 0)
+        # duration = duration_ms / 1000
+        duration = 1
+
+        if duration >= 30:
+            used_model = voice_conveter.model_1
+        else:
+            used_model = voice_conveter.model_2
+
+        output_text = voice_conveter.transcribe(str(voice_file.name), used_model)
+        output_text = summarize.gpt_message_handler(output_text)
     bot.reply_to(message, output_text)
 
 

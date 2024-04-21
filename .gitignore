@@ -5,3 +5,5 @@ result
 .pdm-python
 .env.template
 token
+gpt-api-key
+.idea
