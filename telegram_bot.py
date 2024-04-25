@@ -33,28 +33,21 @@ def voice_processing(message):
         voice_file.write(downloaded_bytes)
         voice_file.seek(0)
 
-        # does not work because of wrong format
-        # info = mediainfo(voice_file.name)
-        # duration_ms = info.get('duration', 0)
-        # duration = duration_ms / 1000
-        duration = 1
-
+        """MESSAGE 1"""
         used_model = voice_conveter.model_1
-
         output_text = voice_conveter.transcribe(str(voice_file.name), used_model)
         output_text = summarize.gpt_message_handler(output_text)
-    bot.reply_to(message, output_text)
+    answer_1 = bot.reply_to(message, output_text)
 
-    # run the bigger neuronal network
+    # run the bigger neuronal network and edit message one
+    """MESSAGE 2"""
+    # define message- and chat-id from the first message
+    chat_id = answer_1.chat.id
+    mesage_id = answer_1.message_id
     used_model = voice_conveter.model_2
-    output_text = voice_conveter.transcribe(str(voice_file.name), used_model)
-    output_text = summarize.gpt_message_handler(output_text)
-    chat_id = message.chat.id
-    message_id = message.message_id
-    text = output_text
-    # sending a second message works
-    bot.reply_to(message, text)
-    bot.edit_message_text(chat_id, message_id, text)
+    answer_2 = voice_conveter.transcribe(str(voice_file.name), used_model)
+    answer_2 = summarize.gpt_message_handler(answer_2)
+    bot.edit_message_text(answer_2, chat_id, mesage_id)
 
 
 print("ready to read messages")

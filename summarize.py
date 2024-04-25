@@ -3,8 +3,9 @@ import openai
 
 def create_prompt(message):
     # creating a prompt for gpt
-    prompt = f"Fasse folgende Nachricht zusammen ohne sie zu erklären{message}." \
-             f" Wenn das nicht geht schicke folgende Nachricht einfach zurück: {message}"
+    prompt = f"Fasse folgende Nachricht zusammen, falls diese länger als 20 Wörter ist sonst schicke sie unbearbeitet " \
+             f"zuruück: {message}." \
+
     return prompt
 
 
