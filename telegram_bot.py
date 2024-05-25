@@ -21,9 +21,14 @@ def echo_all(message):
     bot.reply_to(message, message.text)
 
 
-@bot.message_handler(content_types=['voice'])
+@bot.message_handler(content_types=['voice', 'audio', 'document'])
 def voice_processing(message):
-    file_info = bot.get_file(message.voice.file_id)
+    if message.voice:
+        file_info = bot.get_file(message.voice.file_id)
+    elif message.audio:
+        file_info = bot.get_file(message.audio.file_id)
+    else:
+        file_info = bot.get_file(message.document.file_id)
     downloaded_bytes = bot.download_file(file_info.file_path)
 
     with tempfile.NamedTemporaryFile(mode='wb', delete=False) as voice_file:
