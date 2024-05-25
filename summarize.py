@@ -26,7 +26,7 @@ def gpt_message_handler(message):
 
     # Use the OpenAI Chat API to generate a response
     response = openai.ChatCompletion.create(
-        model='gpt-4-turbo',  # Using Davinci for text generation
+        model='gpt-4o',  # Using Davinci for text generation
         messages=dialog
     )
 
