@@ -8,9 +8,15 @@ dependencies = [
     "telebot",
     "faster-whisper",
     "openai<1.0.0",
+    "pytest>=8.2.1",
 ]
 
 [tool.pdm.options]
 add = ["--no-sync", "--no-self"]
 update = ["--no-sync", "--no-self"]
 remove = ["--no-sync", "--no-self"]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
