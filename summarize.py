@@ -1,5 +1,7 @@
 import openai
 
+import credentials
+
 
 def create_prompt(message):
     # creating a prompt for gpt
@@ -11,8 +13,7 @@ def create_prompt(message):
 
 def gpt_message_handler(message):
     # Read the API key from a file
-    with open("gpt-api-key", "r") as api_key_file:
-        api_key = api_key_file.read().strip()
+    api_key = credentials.get_secret("gpt-api-key")
 
     # Create a prompt from the input message
     prompt = create_prompt(message)

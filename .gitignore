@@ -4,6 +4,6 @@ result
 .direnv
 .pdm-python
 .env.template
-token
+telegram_token
 gpt-api-key
 .idea
