@@ -38,18 +38,19 @@ def voice_processing(message):
         """MESSAGE 1"""
         used_model = voice_conveter.model_1
         output_text = voice_conveter.transcribe(str(voice_file.name), used_model)
+        answer_0 = bot.reply_to(message, output_text)
+        chat_id = answer_0.chat.id
+        message_id = answer_0.message_id
         output_text = summarize.gpt_message_handler(output_text)
-    answer_1 = bot.reply_to(message, output_text)
+    answer_1 = bot.edit_message_text(output_text, chat_id, message_id)
 
     # run the bigger neuronal network and edit message one
     """MESSAGE 2"""
     # define message- and chat-id from the first message
-    chat_id = answer_1.chat.id
-    mesage_id = answer_1.message_id
     used_model = voice_conveter.model_2
     answer_2 = voice_conveter.transcribe(str(voice_file.name), used_model)
     answer_2 = summarize.gpt_message_handler(answer_2)
-    bot.edit_message_text(answer_2, chat_id, mesage_id)
+    bot.edit_message_text(answer_2, chat_id, message_id)
 
 
 print("ready to read messages")
