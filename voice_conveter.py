@@ -3,8 +3,8 @@ from faster_whisper import WhisperModel
 
 
 # choices: base, small, medium, large-v3
-model_size_1 = os.environ.get('MODEL_SIZE', 'small')
-model_size_2 = os.environ.get('MODEL_SIZE', 'medium')
+model_size_1 = os.environ.get('MODEL_SIZE_STAGE_1', 'base')
+model_size_2 = os.environ.get('MODEL_SIZE_STAGE_2', 'medium')
 
 
 # Run on GPU with FP16
