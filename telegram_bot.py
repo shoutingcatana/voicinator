@@ -3,14 +3,11 @@ import tempfile
 import telebot
 import voice_conveter
 import summarize
+import credentials
 # from pydub.utils import mediainfo
 
 
-BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-if not BOT_TOKEN:
-    with open("token") as file:
-        BOT_TOKEN = file.read()
-
+BOT_TOKEN = credentials.get_secret("telegram_token")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 
