@@ -14,7 +14,7 @@ def create_prompt(message, chat_id):
         if id_from_json == chat_id:
             language = language_form_json
     prompt = f"Übersetze folgende Nachricht in {language}, fasse sie zusammen falls diese länger als 20 Wörter" \
-             f" ist, sonst schicke" \
+             f" ist, ansonsten schicke" \
              f" sie unbearbeitet zurück: {message}." \
 
     return prompt
