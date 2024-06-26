@@ -59,25 +59,6 @@ def configure_summary(message):
     user_message_context[message.chat.id] = 'configure_summary'
 
 
-@bot.message_handler(commands=["configure_speed"])
-def configure_speed(message):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    recommended = types.InlineKeyboardButton("recommended", callback_data="recommended")
-    fast = types.InlineKeyboardButton("fast", callback_data="fast")
-    slow = types.InlineKeyboardButton("slow", callback_data="slow")
-    markup.add(recommended, slow, fast)
-
-    bot.send_message(message.chat.id, 'The speed configuration tool allows you to choose the model size that is used '
-                                      'to process your messages. Its recommended to yous both, starting with the small '
-                                      'one and continuing with the bigger one. In this case your message gets updated '
-                                      'when the bigger model is finished with processing. If you want you can also'
-                                      'only yous the big or small one. The small one is faster but less accurate.',
-                                      reply_markup=markup)
-
-    # saving the original message to identify it later
-    user_message_context[message.chat.id] = 'configure_speed'
-
-
 @bot.callback_query_handler(func=lambda call: True)
 def answer(callback):
     if callback.message:
@@ -88,40 +69,40 @@ def answer(callback):
         # saving the users preferences for the summarization in the user specific json data
         elif user_context == 'configure_summary':
             toggle_summarization_status(callback)
-        elif user_context == 'configure_speed':
-            toggle_network_size(callback)
-
-
-def toggle_network_size(callback):
-    responses = {
-        "recommended": "You get a fast answer that gets updated with the better one when finished!",
-        "slow": "Your network is now slower but much more accurate!",
-        "fast": "Your network is now faster but less accurate!"
-    }
-
-    final_answer = responses.get(callback.data, "Invalid option")
-    bot.send_message(callback.message.chat.id, final_answer)
-    user_specific_dict = {"id": callback.message.chat.id, "model_size": callback.data}
-    with open("user_preferences_speed", "w") as json_datei:
-        json.dump(user_specific_dict, json_datei)
 
 
 def toggle_summarization_status(callback):
     action = True if callback.data != "deactivate" else False
     bot.send_message(callback.message.chat.id,
                      f"Summarization has been {'activated' if action else 'deactivated'}!")
-    user_specific_dict = {"id": callback.message.chat.id, "summary_status": action,
-                          "state_of_summarization": callback.data}
-    with open("user_preferences_summary", "w") as json_datei:
-        json.dump(user_specific_dict, json_datei)
+    user_summary_pref = {"id": callback.message.chat.id, "summary_status": action,
+                         "state_of_summarization": callback.data}
+    save_user_settings(user_summary_pref)
 
 
 def toggle_language_status(callback):
     print(callback.data)
     bot.send_message(callback.message.chat.id, f"All your messages will now be translated to {callback.data}!")
-    user_specific__dict = {"id": callback.message.chat.id, "language": callback.data}
-    with open("user_preferences_language", "w") as json_datei:
-        json.dump(user_specific__dict, json_datei)
+    user_language_pref = {"id": callback.message.chat.id, "language": callback.data}
+    save_user_settings(user_language_pref)
+
+
+def save_user_settings(user_preferences):
+    # check if settings.json exists
+    if os.path.exists("settings.json"):
+        with open("settings.json", 'r') as file:
+            data = json.load(file)
+        if 'user_preferences' in data:
+            data['user_preferences'].update(user_preferences)
+        else:
+            data['user_preferences'] = user_preferences
+    else:
+        # Neue Datei mit user_preferences erstellen
+        data = {'user_preferences': user_preferences}
+
+    # JSON-Daten in die Datei schreiben
+    with open("settings.json", 'w') as file:
+        json.dump(data, file, indent=4)
 
 
 @bot.message_handler(content_types=['voice', 'audio', 'document'])
@@ -137,9 +118,6 @@ def voice_processing(message):
     with tempfile.NamedTemporaryFile(mode='wb', delete=False) as voice_file:
         voice_file.write(downloaded_bytes)
         voice_file.seek(0)
-
-    with open("user_preferences_speed", "r") as json_datei:
-        network_size = json.load(json_datei)
 
     """MESSAGE 1"""
     used_model = voice_conveter.model_1

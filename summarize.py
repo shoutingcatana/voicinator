@@ -17,31 +17,34 @@ def create_prompt(message, chat_id):
 
 def check_and_execute_summarization_prompt(chat_id):
     prompt = " "
-    with open("user_preferences_summary", "r") as json_datei:
-        id_and_action = json.load(json_datei)
-        action = id_and_action["summary_status"]
-        user_id = id_and_action["id"]
-        state_of_summarization = id_and_action["state_of_summarization"]
-        if user_id == chat_id:
-            if action:
-                if state_of_summarization == "middle":
-                    prompt = "Fasse sie zusammen, falls sie länger als 20 Wörter ist"
-                elif state_of_summarization == "soft":
-                    prompt = "Fasse sie leicht zusammen, filtere unnötiges raus, falls sie länger als 20 Wörter ist"
-                elif state_of_summarization == "strong":
-                    prompt = "Gebe ihre Kernaussage wieder, falls sie länger als 20 Wörter ist"
+    id_from_json, language, summary_status, state_of_summarization = read_user_preferences()
+    if id_from_json == chat_id:
+        if summary_status:
+            if state_of_summarization == "middle":
+                prompt = "Fasse sie zusammen, falls sie länger als 20 Wörter ist"
+            elif state_of_summarization == "soft":
+                prompt = "Fasse sie leicht zusammen, filtere unnötiges raus, falls sie länger als 20 Wörter ist"
+            elif state_of_summarization == "strong":
+                prompt = "Gebe ihre Kernaussage wieder, falls sie länger als 20 Wörter ist"
 
     return prompt
 
 
 def check_users_language_preferences(chat_id):
-    with open("user_preferences_language", "r") as json_datei:
-        id_and_language = json.load(json_datei)
-        language_from_json = id_and_language["language"]
-        id_from_json = id_and_language["id"]
-        if id_from_json == chat_id:
-            langauge = language_from_json
-    return langauge
+    id_from_json, language, summary_status, state_of_summarization = read_user_preferences()
+    if id_from_json == chat_id:
+        return language
+
+
+def read_user_preferences():
+    with open("settings.json", "r") as json_data:
+        data = json.load(json_data)
+        data = data['user_preferences']
+        language = data["language"]
+        id_form_json = data["id"]
+        summary_status = data["summary_status"]
+        state_of_summarization = data["state_of_summarization"]
+        return id_form_json, language, summary_status, state_of_summarization
 
 
 def gpt_message_handler(message, chat_id):
