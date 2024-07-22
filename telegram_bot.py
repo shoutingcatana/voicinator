@@ -1,6 +1,6 @@
 import tempfile
 import telebot
-import voice_conveter
+import voice_converter
 import summarize
 import credentials
 from telebot import types
@@ -105,12 +105,12 @@ def get_voice_bytes(message):
 
 
 def transcribe_voice(message):
-    used_model = voice_conveter.model_1
+    used_model = voice_converter.model_1
     print(f"Transcribing using model {used_model}")
     with tempfile.NamedTemporaryFile(mode='wb', delete=False) as voice_file:
         voice_file.write(get_voice_bytes(message))
         voice_file.seek(0)
-        return voice_conveter.transcribe(str(voice_file.name), used_model)
+        return voice_converter.transcribe(str(voice_file.name), used_model)
 
 
 @bot.message_handler(content_types=['voice', 'audio', 'document'])
