@@ -104,13 +104,12 @@ def get_voice_bytes(message):
     return downloaded_bytes
 
 
-def transcribe_voice(message):
-    used_model = voice_converter.model_1
-    print(f"Transcribing using model {used_model}")
+def transcribe_voice(message, model=voice_converter.model_1):
+    print(f"Transcribing using model {model}")
     with tempfile.NamedTemporaryFile(mode='wb', delete=False) as voice_file:
         voice_file.write(get_voice_bytes(message))
         voice_file.seek(0)
-        return voice_converter.transcribe(str(voice_file.name), used_model)
+        return voice_converter.transcribe(str(voice_file.name), model)
 
 
 @bot.message_handler(content_types=['voice', 'audio', 'document'])
