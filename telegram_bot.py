@@ -19,12 +19,12 @@ user_message_context = {}
 
 @bot.message_handler(commands=['start', 'how', '?'])
 def send_welcome(message):
-    bot.reply_to(message, "Hello and welcome, i am your personal speech to text bot. With /configure_language you can"
-                          "define you Mother language. With /configure_summary you can add your personal preferences"
-                          " for the summarization tool. And with /configure_speed you can choose a modell size for your"
-                          " transcription. If you forgot any command you can type in rather /start, /how or joust"
-                          " a question sign /? . Dont forget: for any command you need a slash(/)."
-                          " Have fun and a produktiv time")
+    bot.reply_to(message, "Hello and welcome! This is an AI-based speech-to-text Telegram bot. You can send this bot "
+                          "any kind of voice message that you want to convert to text. The response you receive will"
+                          " be automatically summarized. If you want the original message or an even shorter summary,"
+                          " you can click on More (the button right behind each answer) and choose your preferences." 
+                          " If you don't want a translation or summary, you can simply deactivate it. Have fun and be"
+                          " productive!")
 
 
 @bot.message_handler(commands=['configure_language'])
@@ -42,7 +42,6 @@ def configure_language(message):
     user_message_context[message.chat.id] = 'configure_language'
 
 
-@bot.message_handler(commands=['configure_summary'])
 def configure_summary(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
     middle = types.InlineKeyboardButton("middle", callback_data="middle")
@@ -54,21 +53,49 @@ def configure_summary(message):
     bot.send_message(message.chat.id, 'The summarization tool allows you to summarize long audio messages. You can '
                                       'rather deactivate it, or activate it. The length of the summarization depends'
                                       'on the length of the message', reply_markup=markup)
-
+    print(message)
     # saving the original message to identify it later
     user_message_context[message.chat.id] = 'configure_summary'
 
 
+def final_response(message_id, summary):
+    markup = more_button(message_id)
+    summarized_and_translated = bot.send_message(message_id, summary, reply_markup=markup)
+    return summarized_and_translated
+
+
+def more_button(message_id):
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    more = types.InlineKeyboardButton("more", callback_data="more")
+    markup.add(more)
+    user_message_context[message_id] = 'more'
+    return markup
+
+
 @bot.callback_query_handler(func=lambda call: True)
-def answer(callback):
+def manage_users_button_inputs(callback):
+    # checking for an input from the user over the more button
     if callback.message:
         user_context = user_message_context.get(callback.message.chat.id, None)
-        # saving the users mother language in json data
-        if user_context == 'configure_language':
+        #
+        if user_context == "more":
+            show_more_buttons(callback.message.chat.id)
+            # saving the users language in json data
+            configure_language(callback.message)
             toggle_language_status(callback)
-        # saving the users preferences for the summarization in the user specific json data
-        elif user_context == 'configure_summary':
-            toggle_summarization_status(callback)
+            # saving the users preferences for the summarization in the user specific json data
+            # elif user_context == 'configure_summary':
+            #     toggle_summarization_status(callback)
+
+
+def show_more_buttons(chat_id):
+    markup = types.InlineKeyboardMarkup(row_width=3)
+    language = types.InlineKeyboardButton("language", callback_data="language")
+    length = types.InlineKeyboardButton("length", callback_data="length")
+    original = types.InlineKeyboardButton("original", callback_data="original")
+    markup.add(language, length, original)
+    bot.send_message(chat_id, "More", reply_markup=markup)
+    user_message_context[chat_id] = 'more_buttons'
 
 
 def toggle_summarization_status(callback):
@@ -88,6 +115,7 @@ def toggle_language_status(callback):
 
 
 def save_user_settings(user_preferences):
+    # saving the users settings in a json data
     # check if settings.json exists
     if os.path.exists("settings.json"):
         with open("settings.json", 'r') as file:
@@ -119,26 +147,26 @@ def voice_processing(message):
         voice_file.write(downloaded_bytes)
         voice_file.seek(0)
 
+    chat_id = message.chat.id
+
     """MESSAGE 1"""
     used_model = voice_conveter.model_1
     print(f"Transcribing using model {used_model}")
     transcription_1 = voice_conveter.transcribe(str(voice_file.name), used_model)
-    answer_transcription = bot.reply_to(message, transcription_1)
-    summary_1 = summarize.gpt_message_handler(transcription_1, answer_transcription.chat.id)
-    chat_id = answer_transcription.chat.id
-    summarize_and_translate = bot.edit_message_text(summary_1, chat_id, answer_transcription.message_id)
+    summary_1 = summarize.gpt_message_handler(transcription_1, chat_id)
+    summarized_and_translated = final_response(chat_id, summary_1)
 
-    # second pass with better transcription model
-    """Message 2"""
-    used_model = voice_conveter.model_2
-    print(f"Transcribing using model {used_model}")
-    transcription_2 = voice_conveter.transcribe(str(voice_file.name), used_model)
-    # edit transcription message with improved transcription
-    chat_id = answer_transcription.chat.id
-    bot.edit_message_text(transcription_2, chat_id, answer_transcription.message_id)
-    summary_2 = summarize.gpt_message_handler(transcription_2, answer_transcription.chat.id)
-    # edit summary message with improved summary
-    bot.edit_message_text(summary_2, chat_id, summarize_and_translate.message_id)
+    # # second pass with better transcription model
+    # """Message 2"""
+    # used_model = voice_conveter.model_2
+    # print(f"Transcribing using model {used_model}")
+    # transcription_2 = voice_conveter.transcribe(str(voice_file.name), used_model)
+    # # edit transcription message with improved transcription
+    # chat_id = summarized_and_translated.chat.id
+    # bot.edit_message_text(transcription_2, chat_id, summarized_and_translated.message_id)
+    # summary_2 = summarize.gpt_message_handler(transcription_2, summarized_and_translated.chat.id)
+    # # edit summary message with improved summary
+    # bot.edit_message_text(summary_2, chat_id, summarized_and_translated.message_id)
 
 
 print("ready to read messages")

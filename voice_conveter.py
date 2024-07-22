@@ -18,8 +18,6 @@ model_1 = WhisperModel(model_size_1, device="cpu", compute_type="int8")
 model_2 = WhisperModel(model_size_2, device="cpu", compute_type="int8")
 
 
-
-
 def transcribe(filepath, used_model):
     text = ""
     segments, info = used_model.transcribe(filepath, beam_size=5)
