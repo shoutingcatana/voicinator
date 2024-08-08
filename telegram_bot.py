@@ -19,10 +19,10 @@ def send_welcome(message):
 @bot.message_handler(commands=['configure_language'])
 def configure_language(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
-    english = types.InlineKeyboardButton("english", callback_data="lang_english")
-    spanish = types.InlineKeyboardButton("spanish", callback_data="lang_spanish")
-    german = types.InlineKeyboardButton("german", callback_data="lang_german")
-    japanese = types.InlineKeyboardButton("japanese", callback_data="lang_japanese")
+    english = types.InlineKeyboardButton("english", callback_data="set_lang_english")
+    spanish = types.InlineKeyboardButton("spanish", callback_data="set_lang_spanish")
+    german = types.InlineKeyboardButton("german", callback_data="set_lang_german")
+    japanese = types.InlineKeyboardButton("japanese", callback_data="set_lang_japanese")
     markup.add(english, spanish, german, japanese)
 
     bot.send_message(message.chat.id, 'Into which languages should the message be translated?', reply_markup=markup)
@@ -54,11 +54,13 @@ def manage_users_button_inputs(callback):
         if callback.data == "shorter":
             shorten_message(chat_id, message)
         if callback.data == "translate":
-            translate_message(chat_id, message)
-        # if callback.data.startswith("lang_"):
-        #     toggle_language_status(callback)
+            translate_message(chat_id, message, callback)
+        if callback.data.startswith("set_lang_"):
+            toggle_language_status(callback)
         if callback.data.startswith("set_summary_"):
             toggle_summarization_status(callback)
+        if callback.data == "settings":
+            pass
 
 
 def default_markup():
@@ -76,9 +78,13 @@ def shorten_message(chat_id, message):
     bot.edit_message_text(new_text, chat_id, message_id=message.message_id, reply_markup=default_markup())
 
 
-def translate_message(chat_id, message):
+def translate_message(chat_id, message, callback):
     # TODO: Ask user for language if language not yet configured
+    """Falls language == original ist, configure_language funktion aufrufen und danach den process einfach fortsetzen"""
     language = ChatSettings(chat_id).language
+    if language == "original":
+        configure_language(message)
+
     new_text = summarize.gpt_prompt(f"Translate this message to {language}: {message.text}")
     bot.edit_message_text(new_text, chat_id, message_id=message.message_id, reply_markup=default_markup())
 
@@ -89,6 +95,15 @@ def toggle_summarization_status(callback):
     bot.send_message(
         callback.message.chat.id,
         f"From now on, messages will be summarized at the level '{callback.data.split('_')[-1]}'!"
+    )
+
+
+def toggle_language_status(callback):
+    settings = ChatSettings(callback.message.chat.id)
+    settings.modify_settings(language=callback.data.split("_")[-1])
+    bot.send_message(
+        callback.message.chat.id,
+        f"Form now on, messages will be translated to '{callback.data.split('_')[-1]}'!"
     )
 
 
