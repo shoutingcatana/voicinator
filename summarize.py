@@ -16,6 +16,7 @@ def create_prompt(message, summary_level, language):
     prompt += f"\nMessage:\n{message}"
     return prompt
 
+
 def translate_and_summarize(message, summary_level, language):
     # Create a prompt from the input message
     prompt = create_prompt(message, summary_level, language)

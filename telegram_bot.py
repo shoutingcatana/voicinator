@@ -55,6 +55,8 @@ def manage_users_button_inputs(callback):
             shorten_message(chat_id, message)
         if callback.data == "translate":
             translate_message(chat_id, message, callback)
+        if callback.data == "settings":
+            settings_button()
         if callback.data.startswith("set_lang_"):
             toggle_language_status(callback)
         if callback.data.startswith("set_summary_"):
@@ -73,6 +75,15 @@ def default_markup():
     return markup
 
 
+def settings_button():
+    markup = types.InlineKeyboardMarkup(row_width=4)
+    language = types.InlineKeyboardButton("language", callback_data="language")
+    back = types.InlineKeyboardButton("back", callback_data="back")
+    summary_status = types.InlineKeyboardButton("Summary ON/OFF", callback_data="set_summary_status")
+    markup.add(language, back, summary_status)
+    return markup
+
+
 def shorten_message(chat_id, message):
     new_text = summarize.gpt_prompt(f"Shorten this message: {message.text}")
     bot.edit_message_text(new_text, chat_id, message_id=message.message_id, reply_markup=default_markup())
@@ -80,11 +91,10 @@ def shorten_message(chat_id, message):
 
 def translate_message(chat_id, message, callback):
     # TODO: Ask user for language if language not yet configured
-    """Falls language == original ist, configure_language funktion aufrufen und danach den process einfach fortsetzen"""
     language = ChatSettings(chat_id).language
     if language == "original":
         configure_language(message)
-
+    language = ChatSettings(chat_id).language
     new_text = summarize.gpt_prompt(f"Translate this message to {language}: {message.text}")
     bot.edit_message_text(new_text, chat_id, message_id=message.message_id, reply_markup=default_markup())
 
