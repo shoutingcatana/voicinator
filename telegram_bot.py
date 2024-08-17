@@ -5,6 +5,8 @@ import summarize
 import credentials
 from telebot import types
 from settings import ChatSettings
+import image_reader
+import io
 
 
 BOT_TOKEN = credentials.get_secret("telegram_token")
@@ -43,6 +45,22 @@ def configure_summary(message):
     )
 
 
+# messages = []
+# message_ids = []
+# def handle_message_ids(message):
+#     global message_ids
+#     global messages
+#
+#     # Speichere die aktuelle Nachrichten-ID
+#     message_ids.append(message.message_id)
+#     messages.append(message)
+#     # Wenn es mehr als zwei Nachrichten gibt, entferne die älteste
+#     if len(message_ids) > 2:
+#         message_ids.pop(0)
+#         messages.pop(0)
+
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def manage_users_button_inputs(callback):
     # checking for an input from the user over the more button
@@ -54,11 +72,12 @@ def manage_users_button_inputs(callback):
         if callback.data == "shorter":
             shorten_message(chat_id, message)
         if callback.data == "translate":
-            translate_message(chat_id, message, callback)
+            translate_message(chat_id, message)
         if callback.data == "settings":
             settings_button()
         if callback.data.startswith("set_lang_"):
-            toggle_language_status(callback)
+            toggle_language_status(callback, chat_id, message)
+            translate_message(chat_id, message)
         if callback.data.startswith("set_summary_"):
             toggle_summarization_status(callback)
         if callback.data == "settings":
@@ -89,14 +108,24 @@ def shorten_message(chat_id, message):
     bot.edit_message_text(new_text, chat_id, message_id=message.message_id, reply_markup=default_markup())
 
 
-def translate_message(chat_id, message, callback):
+def translate_message(chat_id, message):
     # TODO: Ask user for language if language not yet configured
     language = ChatSettings(chat_id).language
-    if language == "original":
-        configure_language(message)
-    language = ChatSettings(chat_id).language
+    language_defined = check_for_language(chat_id)
+    # handle_message_ids(message)
+    # if not language_defined:
+    #     configure_language(message)
+    #     return
+    # print(language)
     new_text = summarize.gpt_prompt(f"Translate this message to {language}: {message.text}")
-    bot.edit_message_text(new_text, chat_id, message_id=message.message_id, reply_markup=default_markup())
+    # bot.edit_message_text(new_text, chat_id, message_id=message_ids[0], reply_markup=default_markup())
+
+
+def check_for_language(chat_id):
+    language = ChatSettings(chat_id).language
+    if language == "original":
+        return False
+    return True
 
 
 def toggle_summarization_status(callback):
@@ -108,13 +137,13 @@ def toggle_summarization_status(callback):
     )
 
 
-def toggle_language_status(callback):
+def toggle_language_status(callback, chat_id, message):
     settings = ChatSettings(callback.message.chat.id)
     settings.modify_settings(language=callback.data.split("_")[-1])
-    bot.send_message(
-        callback.message.chat.id,
-        f"Form now on, messages will be translated to '{callback.data.split('_')[-1]}'!"
-    )
+    # bot.send_message(
+    #    callback.message.chat.id,
+    #    f"Form now on, messages will be translated to '{callback.data.split('_')[-1]}'!"
+    #)
 
 
 def get_voice_bytes(message):
@@ -155,6 +184,20 @@ def transcribe_reply(message, summary_level=None, language=None, reply_message=N
         bot.edit_message_text("Summarizing...", chat_id, message_id=reply_message.message_id)
         final_text = summarize.translate_and_summarize(final_text, summary_level, language)
     bot.edit_message_text(final_text, chat_id, message_id=reply_message.message_id, reply_markup=default_markup())
+
+
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    # Die ID des größten (besten) Fotos abrufen
+    photo_id = message.photo[-1].file_id
+
+    # Datei info vom Telegram-Server abrufen
+    file_info = bot.get_file(photo_id)
+
+    # Datei vom Telegram-Server herunterladen
+    downloaded_file = bot.download_file(file_info.file_path)
+    text = image_reader.extract_text(io.BytesIO(downloaded_file))
+    bot.reply_to(message, f"Extrahierter text: {text}")
 
 
 print("ready to read messages")
