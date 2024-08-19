@@ -7,6 +7,11 @@ from telebot import types
 from settings import ChatSettings
 import image_reader
 import io
+from PIL import Image
+import pytesseract
+import pdf2image
+from pdf2image import convert_from_path
+import pymupdf
 
 
 BOT_TOKEN = credentials.get_secret("telegram_token")
@@ -58,7 +63,6 @@ def configure_summary(message):
 #     if len(message_ids) > 2:
 #         message_ids.pop(0)
 #         messages.pop(0)
-
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -166,7 +170,7 @@ def transcribe_voice(message, model=voice_converter.model_1):
         return voice_converter.transcribe(str(voice_file.name), model)
 
 
-@bot.message_handler(content_types=['voice', 'audio', 'document'])
+@bot.message_handler(content_types=['voice', 'audio'])
 def transcribe_reply(message, summary_level=None, language=None, reply_message=None):
     settings = ChatSettings(message.chat.id)
     if not summary_level:
@@ -186,18 +190,100 @@ def transcribe_reply(message, summary_level=None, language=None, reply_message=N
     bot.edit_message_text(final_text, chat_id, message_id=reply_message.message_id, reply_markup=default_markup())
 
 
-@bot.message_handler(content_types=['photo'])
+def document_is_audio(message):
+    if message.content_type == 'document':
+        mime_type = message.document.mime_type
+        # Erlaubte MIME-Typen für Audio-Dateien
+        allowed_mime_types = ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/x-m4a']
+        if mime_type in allowed_mime_types:
+            return True
+        else:
+            return False
+
+
+def extract_text_from_image(image_data):
+    # Prüfe, ob image_data bereits ein PIL.Image-Objekt ist
+    if isinstance(image_data, Image.Image):
+        image = image_data
+    else:
+        # Andernfalls wird image_data als Bytes angenommen und als Bild geladen
+        image = Image.open(io.BytesIO(image_data))
+
+    # Verwende pytesseract, um den Text aus dem Bild zu extrahieren
+    text = pytesseract.image_to_string(image)
+    return text
+
+
+def convert_pdf_to_images(pdf_path):
+    """ Konvertiert jede Seite der PDF in ein Bild und gibt die Bilder als Liste zurück. """
+    pdf_document = pymupdf.open(pdf_path)
+    images = []
+    for page_number in range(len(pdf_document)):
+        page = pdf_document.load_page(page_number)
+        pix = page.get_pixmap()
+        img_byte_arr = io.BytesIO(pix.tobytes())
+        img = Image.open(img_byte_arr)
+        images.append(img)
+    return images
+
+
+@bot.message_handler(content_types=['photo', 'document'])
 def handle_photo(message):
-    # Die ID des größten (besten) Fotos abrufen
-    photo_id = message.photo[-1].file_id
+    if document_is_audio(message):
+        transcribe_reply(message)
+        return
 
-    # Datei info vom Telegram-Server abrufen
-    file_info = bot.get_file(photo_id)
+    allowed_document_types = [
+        'application/pdf',  # PDFs
+        'image/jpeg',  # JPEG
+        'image/png'  # PNG
+    ]
 
-    # Datei vom Telegram-Server herunterladen
+    if message.content_type == "photo":
+        file_id = message.photo[-1].file_id
+        print("is photo")
+    elif message.document.mime_type in allowed_document_types:
+        print("is document")
+        file_id = message.document.file_id
+        file_info = bot.get_file(file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        if message.document.mime_type == "application/pdf":
+            # Speichere die heruntergeladene PDF-Datei temporär
+            with open('temp.pdf', 'wb') as f:
+                f.write(downloaded_file)
+
+            # Konvertiere die PDF-Seiten in Bilder
+            images = convert_pdf_to_images('temp.pdf')
+
+            # Extrahiere Text aus jedem Bild und sende den Text zurück
+            all_text = ""
+            for image in images:
+                text = extract_text_from_image(image)
+                all_text += text + "\n"
+            print(f"Extrakt form document {all_text}")
+            bot.reply_to(message, f"Extrahierter Text: {all_text}")
+            return
+
+    else:
+        return
+
+    file_info = bot.get_file(file_id)
     downloaded_file = bot.download_file(file_info.file_path)
-    text = image_reader.extract_text(io.BytesIO(downloaded_file))
-    bot.reply_to(message, f"Extrahierter text: {text}")
+
+    # Wenn das heruntergeladene Dokument ein Bild ist, öffne es als PIL Image
+    image = Image.open(io.BytesIO(downloaded_file))
+
+    # Extrahiere den Text aus dem Bild
+    text = extract_text_from_image(image)
+    print(f"Extrakt from image: {text}")
+    bot.reply_to(message, f"Extrahierter Text: {text}")
+
+
+
+
+
+# Weitere Bot-Initialisierung hier
 
 
 print("ready to read messages")
