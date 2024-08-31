@@ -283,6 +283,10 @@ def handle_photo(message):
 
 # Weitere Bot-Initialisierung hier
 
+def main():
+    print("ready to read messages")
+    bot.infinity_polling()
 
-print("ready to read messages")
-bot.infinity_polling()
+
+if __name__ == "__main__":
+    main()

@@ -20,6 +20,7 @@
           paths.projectRoot = ./.;
           paths.projectRootFile = "flake.nix";
           overrides = {
+            pytesseract.imports = [./overrides/pytesseract];
             gpt-engineer = {
               mkDerivation.buildInputs = [ config.deps.python.pkgs.poetry-core ];
               mkDerivation.propagatedBuildInputs = [ config.deps.python.pkgs.tkinter ];
