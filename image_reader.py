@@ -1,6 +1,5 @@
 from PIL import Image
 import pytesseract as tess
-import pdfplumber
 import io
 from pdf2image import convert_from_path
 

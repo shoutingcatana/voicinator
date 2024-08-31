@@ -9,8 +9,6 @@ import image_reader
 import io
 from PIL import Image
 import pytesseract
-import pdf2image
-from pdf2image import convert_from_path
 import pymupdf
 
 

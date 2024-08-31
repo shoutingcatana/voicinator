@@ -9,6 +9,9 @@ dependencies = [
     "faster-whisper",
     "openai<1.0.0",
     "pytest>=8.2.1",
+    "pytesseract>=0.3.13",
+    "pdf2image>=1.17.0",
+    "pymupdf>=1.24.9",
 ]
 
 [tool.pdm.options]
