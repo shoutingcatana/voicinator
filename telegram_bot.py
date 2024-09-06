@@ -5,7 +5,6 @@ import summarize
 import credentials
 from telebot import types
 from settings import ChatSettings
-import image_reader
 import io
 from PIL import Image
 import pytesseract
