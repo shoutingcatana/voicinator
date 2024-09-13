@@ -47,4 +47,4 @@ class ChatSettings:
     def summary_level(self):
         if "summary_level" in self.all_settings:
             return self.all_settings["summary_level"]
-        return "middle"
+        return "ON"

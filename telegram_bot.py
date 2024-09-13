@@ -26,41 +26,42 @@ def configure_language(message):
     bot.send_message(message.chat.id, 'Into which languages should the message be translated?', reply_markup=markup)
 
 
-def configure_summary(message):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    original = types.InlineKeyboardButton("original", callback_data="set_summary_original")
-    soft = types.InlineKeyboardButton("slight", callback_data="set_summary_soft")
-    middle = types.InlineKeyboardButton("middle", callback_data="set_summary_middle")
-    strong = types.InlineKeyboardButton("strong", callback_data="set_summary_strong")
-    markup.add(original, soft, middle, strong)
-
-    bot.send_message(
-        message.chat.id,
-        'How much should messages be summarized?',
-        reply_markup=markup
-    )
-
 @bot.callback_query_handler(func=lambda call: True)
 def manage_users_button_inputs(callback):
-    # checking for an input from the user over the more button
     chat_id = callback.message.chat.id
     message = callback.message
+
     if callback.message:
         if callback.data == "original":
-           transcribe_reply(callback.message.reply_to_message, summary_level="original", reply_message=message)
+            transcribe_reply(callback.message.reply_to_message, summary_level="OFF", reply_message=message)
         if callback.data == "shorter":
             shorten_message(chat_id, message)
         if callback.data == "translate":
-            bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=language_markup())
-        if callback.data == "settings":
-            settings_button()
+            # No need for additional handling, just set the markup as usual
+            bot.edit_message_reply_markup(chat_id, message_id=message.message_id,
+                                          reply_markup=language_markup())  # False means translate path
         if callback.data.startswith("set_lang_"):
-            language = toggle_language_status(callback, chat_id, message)
+            # Determine if the second parameter should be True or False based on the data passed
+            language = toggle_language_status(callback)
             translate_message(chat_id, message, language)
         if callback.data.startswith("set_summary_"):
             toggle_summarization_status(callback)
         if callback.data == "settings":
-            pass
+            bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=settings_markup())
+        if callback.data == "back":
+            bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=default_markup())
+
+
+
+def language_markup():
+    """Creates the language markup, appending '_consistent' if coming from consistent translation."""
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    english = types.InlineKeyboardButton("english", callback_data="set_lang_english")
+    spanish = types.InlineKeyboardButton("spanish", callback_data="set_lang_spanish")
+    german = types.InlineKeyboardButton("german", callback_data="set_lang_german")
+    japanese = types.InlineKeyboardButton("japanese", callback_data="set_lang_japanese")
+    markup.add(english, spanish, german, japanese)
+    return markup
 
 
 def default_markup():
@@ -72,22 +73,12 @@ def default_markup():
     markup.add(original, shorter, translate, settings)
     return markup
 
-def language_markup():
+
+def settings_markup():
     markup = types.InlineKeyboardMarkup(row_width=2)
-    english = types.InlineKeyboardButton("english", callback_data="set_lang_english")
-    spanish = types.InlineKeyboardButton("spanish", callback_data="set_lang_spanish")
-    german = types.InlineKeyboardButton("german", callback_data="set_lang_german")
-    japanese = types.InlineKeyboardButton("japanese", callback_data="set_lang_japanese")
-    markup.add(english, spanish, german, japanese)
-    return markup
-
-
-def settings_button():
-    markup = types.InlineKeyboardMarkup(row_width=4)
-    language = types.InlineKeyboardButton("language", callback_data="language")
-    back = types.InlineKeyboardButton("back", callback_data="back")
     summary_status = types.InlineKeyboardButton("Summary ON/OFF", callback_data="set_summary_status")
-    markup.add(language, back, summary_status)
+    back = types.InlineKeyboardButton("back", callback_data="back")
+    markup.add(summary_status, back)
     return markup
 
 
@@ -106,17 +97,20 @@ def check_for_language(chat_id):
 
 def toggle_summarization_status(callback):
     settings = ChatSettings(callback.message.chat.id)
-    settings.modify_settings(summary_level=callback.data.split("_")[-1])
+    summary_level = settings.summary_level
+    if summary_level == "ON":
+        summary_level = "OFF"
+    else:
+        summary_level = "ON"
+    settings.modify_settings(summary_level=summary_level)
     bot.send_message(
         callback.message.chat.id,
-        f"From now on, messages will be summarized at the level '{callback.data.split('_')[-1]}'!"
+        f"Summarization for audio is now turned {summary_level}'!"
     )
 
 
-def toggle_language_status(callback, chat_id, message):
-    settings = ChatSettings(callback.message.chat.id)
+def toggle_language_status(callback):
     language = callback.data.split("_")[-1]
-    settings.modify_settings(language=language)
     return language
 
 
@@ -142,21 +136,14 @@ def transcribe_voice(message, model=voice_converter.model_1):
 
 @bot.message_handler(content_types=['voice', 'audio'])
 def transcribe_reply(message, summary_level=None, language=None, reply_message=None):
-    settings = ChatSettings(message.chat.id)
-    if not summary_level:
-        summary_level = settings.summary_level
-    if not language:
-        language = settings.language
-
     chat_id = message.chat.id
     if not reply_message:
         reply_message = bot.reply_to(message, "Listening...")
     else:
         bot.edit_message_text("Listening...", chat_id, message_id=reply_message.message_id)
     final_text = transcribe_voice(message)
-    if summary_level != "original":
+    if summary_level != "OFF":
         bot.edit_message_text("Summarizing...", chat_id, message_id=reply_message.message_id)
-        # TODO: ask the user for consistent translation
         language = "original"
         final_text = summarize.translate_and_summarize(final_text, summary_level, language)
     bot.edit_message_text(final_text, chat_id, message_id=reply_message.message_id, reply_markup=default_markup())
@@ -165,7 +152,6 @@ def transcribe_reply(message, summary_level=None, language=None, reply_message=N
 def document_is_audio(message):
     if message.content_type == 'document':
         mime_type = message.document.mime_type
-        # Erlaubte MIME-Typen für Audio-Dateien
         allowed_mime_types = ['audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/x-m4a']
         if mime_type in allowed_mime_types:
             return True
@@ -173,27 +159,25 @@ def document_is_audio(message):
             return False
 
 def translate_message(chat_id, message, language = None):
-    # language = ChatSettings(chat_id).language
-    # language_defined = check_for_language(chat_id)
     translated_text = summarize.gpt_prompt(f"Translate this message to {language}: {message.text}")
     bot.edit_message_text(translated_text, chat_id, message_id=message.message_id, reply_markup=default_markup())
 
 
 def extract_text_from_image(image_data):
-    # Prüfe, ob image_data bereits ein PIL.Image-Objekt ist
+    # Check if image_data is already a PIL Image
     if isinstance(image_data, Image.Image):
         image = image_data
     else:
-        # Andernfalls wird image_data als Bytes angenommen und als Bild geladen
+        # Otherwise, assume image_data is bytes and load it as an image
         image = Image.open(io.BytesIO(image_data))
-
-    # Verwende pytesseract, um den Text aus dem Bild zu extrahieren
+    # Use pytesseract to extract text from the image
     text = pytesseract.image_to_string(image)
     return text
 
 
+
 def convert_pdf_to_images(pdf_path):
-    """ Konvertiert jede Seite der PDF in ein Bild und gibt die Bilder als Liste zurück. """
+    # converts every page from the pdf to image and returns them as list
     pdf_document = pymupdf.open(pdf_path)
     images = []
     for page_number in range(len(pdf_document)):
@@ -208,33 +192,27 @@ def convert_pdf_to_images(pdf_path):
 @bot.message_handler(content_types=['photo', 'document'])
 def handle_photo(message):
     if document_is_audio(message):
-        transcribe_reply(message)
+        transcribe_reply(message, summary_level="OFF")
         return
 
     allowed_document_types = [
-        'application/pdf',  # PDFs
-        'image/jpeg',  # JPEG
-        'image/png'  # PNG
+        'application/pdf',
+        'image/jpeg',
+        'image/png'
     ]
 
     if message.content_type == "photo":
         file_id = message.photo[-1].file_id
-        print("is photo")
     elif message.document.mime_type in allowed_document_types:
-        print("is document")
         file_id = message.document.file_id
         file_info = bot.get_file(file_id)
         downloaded_file = bot.download_file(file_info.file_path)
-
         if message.document.mime_type == "application/pdf":
-            # Speichere die heruntergeladene PDF-Datei temporär
+            # save the download pdf temporary
             with open('temp.pdf', 'wb') as f:
                 f.write(downloaded_file)
-
-            # Konvertiere die PDF-Seiten in Bilder
             images = convert_pdf_to_images('temp.pdf')
-
-            # Extrahiere Text aus jedem Bild und sende den Text zurück
+            # extract the text form every picture and send it back
             all_text = ""
             for image in images:
                 text = extract_text_from_image(image)
@@ -249,19 +227,14 @@ def handle_photo(message):
     file_info = bot.get_file(file_id)
     downloaded_file = bot.download_file(file_info.file_path)
 
-    # Wenn das heruntergeladene Dokument ein Bild ist, öffne es als PIL Image
+    # if the downloaded document is a picture, oen it as pil image
     image = Image.open(io.BytesIO(downloaded_file))
 
-    # Extrahiere den Text aus dem Bild
+    # extract the text from the image
     text = extract_text_from_image(image)
     print(f"Extrakt from image: {text}")
     bot.reply_to(message, f"Extrahierter Text: {text}")
 
-
-
-
-
-# Weitere Bot-Initialisierung hier
 
 def main():
     print("ready to read messages")

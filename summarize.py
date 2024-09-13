@@ -10,7 +10,7 @@ openai.api_key = api_key
 
 def create_prompt(message, summary_level, language):
     # creating a prompt for gpt
-    prompt = f"Summarize the message. These different summary levels exist: original (no summarization), soft, middle, strong. The current summary level is '{summary_level}'."
+    prompt = f"Summarize the message. These different summary levels exist: ON/OFF. The current summary level is '{summary_level}'."
     prompt += f"\nThe target language is (keep same language in case of 'original') '{language}'"
     prompt += "\nSimply reply with the final message, do not provide any context"
     prompt += f"\nMessage:\n{message}"
