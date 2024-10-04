@@ -4,12 +4,18 @@ import voice_converter
 import summarize
 import credentials
 from telebot import types
+
+from databank import get_btc_address
 from settings import ChatSettings
 import io
 from PIL import Image
 import pytesseract
 import pymupdf
-
+import payment
+import os
+import databank
+import time
+import requests
 
 BOT_TOKEN = credentials.get_secret("telegram_token")
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -25,6 +31,18 @@ def configure_language(message):
     markup = language_markup()
     bot.send_message(message.chat.id, 'Into which languages should the message be translated?', reply_markup=markup)
 
+@bot.message_handler(commands=['donate'])
+def donation(message):
+    chat_id = message.chat.id
+    amount, address = payment.request()
+    bot.send_message(chat_id, f"You can donate *{amount}BTC* to: *{address}*", parse_mode="Markdown")
+    # save the created btc address so we can assign it later
+    databank.add_or_update_user(chat_id, address)
+    qr_code = payment.generate_qr_code(address)
+    with open(qr_code, 'rb') as photo:
+        bot.send_photo(chat_id, photo)
+    os.remove(qr_code)
+    addresses = databank.get_btc_address(chat_id)
 
 @bot.callback_query_handler(func=lambda call: True)
 def manage_users_button_inputs(callback):
@@ -32,29 +50,28 @@ def manage_users_button_inputs(callback):
     message = callback.message
 
     if callback.message:
-        if callback.data == "original":
-            transcribe_reply(callback.message.reply_to_message, summary_level="OFF", reply_message=message)
-        if callback.data == "shorter":
-            shorten_message(chat_id, message)
-        if callback.data == "translate":
-            # No need for additional handling, just set the markup as usual
-            bot.edit_message_reply_markup(chat_id, message_id=message.message_id,
-                                          reply_markup=language_markup())  # False means translate path
+        action_map = {
+            "original": lambda: transcribe_reply(callback.message.reply_to_message, summary_level="OFF", reply_message=message),
+            "shorter": lambda: shorten_message(chat_id, message),
+            "translate": lambda: bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=language_markup()),
+            "settings": lambda: bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=settings_markup()),
+            "donate": lambda: donation(message),
+            "back": lambda: bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=default_markup())
+        }
+
+        if callback.data in action_map:
+            action_map[callback.data]()
+
         if callback.data.startswith("set_lang_"):
-            # Determine if the second parameter should be True or False based on the data passed
             language = toggle_language_status(callback)
             translate_message(chat_id, message, language)
+
         if callback.data.startswith("set_summary_"):
             toggle_summarization_status(callback)
-        if callback.data == "settings":
-            bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=settings_markup())
-        if callback.data == "back":
-            bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=default_markup())
-
 
 
 def language_markup():
-    """Creates the language markup, appending '_consistent' if coming from consistent translation."""
+    #Creates the language markup, appending '_consistent' if coming from consistent translation.
     markup = types.InlineKeyboardMarkup(row_width=2)
     english = types.InlineKeyboardButton("english", callback_data="set_lang_english")
     spanish = types.InlineKeyboardButton("spanish", callback_data="set_lang_spanish")
@@ -77,8 +94,9 @@ def default_markup():
 def settings_markup():
     markup = types.InlineKeyboardMarkup(row_width=2)
     summary_status = types.InlineKeyboardButton("Summary ON/OFF", callback_data="set_summary_status")
+    donate = types.InlineKeyboardButton("donate", callback_data="donate")
     back = types.InlineKeyboardButton("back", callback_data="back")
-    markup.add(summary_status, back)
+    markup.add(summary_status, back, donate)
     return markup
 
 
@@ -195,12 +213,7 @@ def handle_photo(message):
         transcribe_reply(message, summary_level="OFF")
         return
 
-    allowed_document_types = [
-        'application/pdf',
-        'image/jpeg',
-        'image/png'
-    ]
-
+    allowed_document_types = ['application/pdf', 'image/jpeg', 'image/png']
     if message.content_type == "photo":
         file_id = message.photo[-1].file_id
     elif message.document.mime_type in allowed_document_types:
@@ -218,7 +231,7 @@ def handle_photo(message):
                 text = extract_text_from_image(image)
                 all_text += text + "\n"
             print(f"Extrakt form document {all_text}")
-            bot.reply_to(message, f"Extrahierter Text: {all_text}")
+            bot.reply_to(message, f"Extracted texte: {all_text}", reply_markup=default_markup())
             return
 
     else:
@@ -233,7 +246,7 @@ def handle_photo(message):
     # extract the text from the image
     text = extract_text_from_image(image)
     print(f"Extrakt from image: {text}")
-    bot.reply_to(message, f"Extrahierter Text: {text}")
+    bot.reply_to(message, f"Extrahierter Text: {text}", reply_markup=default_markup())
 
 
 def main():
