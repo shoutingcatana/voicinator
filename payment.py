@@ -23,6 +23,23 @@ def request():
         print(r.status_code, r.text)
 
 
+def get_total_btc_received(addresses):
+    total_balance = 0.0
+    for address in addresses:
+        if not address:
+            continue
+
+        response = requests.get(f"{url}/{address}", headers=headers)
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                if 'balance' in data:
+                    total_balance += float(data['balance'])
+            except ValueError:
+                pass
+    return total_balance
+
+
 def generate_qr_code(bitcoin_address):
     qr = qrcode.QRCode(
         version=1,

@@ -43,6 +43,8 @@ def donation(message):
         bot.send_photo(chat_id, photo)
     os.remove(qr_code)
     addresses = databank.get_btc_address(chat_id)
+    total_balance = payment.get_total_btc_received(addresses)
+    bot.send_message(message.chat.id, f"You donated {total_balance}BTC in total")
 
 @bot.callback_query_handler(func=lambda call: True)
 def manage_users_button_inputs(callback):
