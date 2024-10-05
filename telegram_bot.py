@@ -25,6 +25,12 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def send_welcome(message):
     bot.reply_to(message, "Hello, forward me a voice message and I will summarize it!")
 
+@bot.message_handler(commands=["requestCount"])
+def get_request_count(message):
+    count_image_requests, count_audio_requests = databank.count_users_requests(message.chat.id)
+    bot.send_message(message.chat.id, f"You extracted text from {count_image_requests} images or PDFs*")
+    bot.send_message(message.chat.id,f"You extracted text from {count_audio_requests} audio files or voice messages*")
+
 
 @bot.message_handler(commands=['configure_language'])
 def configure_language(message):
@@ -46,6 +52,7 @@ def donation(message):
     total_balance = payment.get_total_btc_received(addresses)
     bot.send_message(message.chat.id, f"You donated {total_balance}BTC in total")
 
+
 @bot.callback_query_handler(func=lambda call: True)
 def manage_users_button_inputs(callback):
     chat_id = callback.message.chat.id
@@ -58,6 +65,7 @@ def manage_users_button_inputs(callback):
             "translate": lambda: bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=language_markup()),
             "settings": lambda: bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=settings_markup()),
             "donate": lambda: donation(message),
+            "get_analytics": lambda: get_request_count(message),
             "back": lambda: bot.edit_message_reply_markup(chat_id, message_id=message.message_id, reply_markup=default_markup())
         }
 
@@ -97,8 +105,9 @@ def settings_markup():
     markup = types.InlineKeyboardMarkup(row_width=2)
     summary_status = types.InlineKeyboardButton("Summary ON/OFF", callback_data="set_summary_status")
     donate = types.InlineKeyboardButton("donate", callback_data="donate")
+    analytics = types.InlineKeyboardButton("analytics", callback_data="get_analytics")
     back = types.InlineKeyboardButton("back", callback_data="back")
-    markup.add(summary_status, back, donate)
+    markup.add(summary_status, donate, analytics, back)
     return markup
 
 
@@ -167,6 +176,9 @@ def transcribe_reply(message, summary_level=None, language=None, reply_message=N
         language = "original"
         final_text = summarize.translate_and_summarize(final_text, summary_level, language)
     bot.edit_message_text(final_text, chat_id, message_id=reply_message.message_id, reply_markup=default_markup())
+    databank.increment_request_count(user_id=message.chat.id, voice=True)  # count up users requests
+
+
 
 
 def document_is_audio(message):
@@ -214,7 +226,7 @@ def handle_photo(message):
     if document_is_audio(message):
         transcribe_reply(message, summary_level="OFF")
         return
-
+    databank.increment_request_count(user_id=message.chat.id, image=True) # count up users requests
     allowed_document_types = ['application/pdf', 'image/jpeg', 'image/png']
     if message.content_type == "photo":
         file_id = message.photo[-1].file_id

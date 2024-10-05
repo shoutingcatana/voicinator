@@ -24,7 +24,7 @@ def request():
 
 
 def get_total_btc_received(addresses):
-    total_balance = 0.0
+    total_balance = 0.000
     for address in addresses:
         if not address:
             continue
