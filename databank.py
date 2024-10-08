@@ -47,6 +47,26 @@ def add_or_update_user(user_id, btc_address):
     conn.commit()
     conn.close()
 
+def add_columns():
+    conn = sqlite3.connect("btc_addresses.db")
+    cursor = conn.cursor()
+
+    # Neue Spalte für count_image_requests hinzufügen, falls sie nicht existiert
+    try:
+        cursor.execute("ALTER TABLE btc_addresses ADD COLUMN count_image_requests INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        print("Spalte count_image_requests existiert bereits.")
+
+    # Neue Spalte für count_audio_requests hinzufügen, falls sie nicht existiert
+    try:
+        cursor.execute("ALTER TABLE btc_addresses ADD COLUMN count_audio_requests INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        print("Spalte count_audio_requests existiert bereits.")
+
+    conn.commit()
+    conn.close()
+
+
 
 def get_btc_address(user_id):
     conn = sqlite3.connect("btc_addresses.db")
@@ -86,4 +106,4 @@ def increment_request_count(user_id, image=False, voice=False):
     print(f"Der user: {user_id} hat eine Anfrage an {'image extractor' if image else 'voice extractor'} gesendet")
 
 
-
+add_columns()
