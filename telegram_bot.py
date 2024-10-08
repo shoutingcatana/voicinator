@@ -28,8 +28,18 @@ def send_welcome(message):
 @bot.message_handler(commands=["requestCount"])
 def get_request_count(message):
     count_image_requests, count_audio_requests = databank.count_users_requests(message.chat.id)
-    bot.send_message(message.chat.id, f"You extracted text from {count_image_requests} images or PDFs*")
-    bot.send_message(message.chat.id,f"You extracted text from {count_audio_requests} audio files or voice messages*")
+    bot.send_message(
+        message.chat.id,
+        f"*Extracted text from images/documents:* _{count_image_requests}_\n"
+        f"*Extracted text from audios/files:* _{count_audio_requests}_",
+        parse_mode="Markdown"
+    )
+
+@bot.message_handler(commands=["summary.status"])
+def get_current_settings(callback):
+    chat_id = callback.chat.id
+    summary_lvl = ChatSettings(chat_id).summary_level
+    bot.send_message(chat_id, summary_lvl)
 
 
 @bot.message_handler(commands=['configure_language'])
@@ -164,13 +174,14 @@ def transcribe_voice(message, model=voice_converter.model_1):
 
 
 @bot.message_handler(content_types=['voice', 'audio'])
-def transcribe_reply(message, summary_level=None, language=None, reply_message=None):
+def transcribe_reply(message, summary_level=None, reply_message=None):
     chat_id = message.chat.id
     if not reply_message:
         reply_message = bot.reply_to(message, "Listening...")
     else:
         bot.edit_message_text("Listening...", chat_id, message_id=reply_message.message_id)
     final_text = transcribe_voice(message)
+
     if summary_level != "OFF":
         bot.edit_message_text("Summarizing...", chat_id, message_id=reply_message.message_id)
         language = "original"
