@@ -4,8 +4,6 @@ import voice_converter
 import summarize
 import credentials
 from telebot import types
-
-from databank import get_btc_address
 from settings import ChatSettings
 import io
 from PIL import Image
@@ -14,8 +12,7 @@ import pymupdf
 import payment
 import os
 import databank
-import time
-import requests
+
 
 BOT_TOKEN = credentials.get_secret("telegram_token")
 bot = telebot.TeleBot(BOT_TOKEN)
