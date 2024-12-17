@@ -20,7 +20,8 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(commands=['start', 'how', '?'])
 def send_welcome(message):
-    bot.reply_to(message, "Hello, forward me a voice message and I will summarize it!")
+    bot.reply_to(message, "Hello, forward me a voice message and I will summarize it! You can also send images or pdfs"
+                          "to extract the text.")
 
 @bot.message_handler(commands=["requestCount"])
 def get_request_count(message):

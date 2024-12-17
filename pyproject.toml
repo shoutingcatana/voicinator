@@ -16,6 +16,7 @@ dependencies = [
     "qrcode>=7.4.2",
     "sqlite-utils>=3.37",
     "Pillow>=10.4.0",
+    "pandas>=2.2.3",
 ]
 
 [tool.pdm.options]

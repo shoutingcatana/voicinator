@@ -8,14 +8,13 @@ model_size_2 = os.environ.get('MODEL_SIZE_STAGE_2', 'medium')
 
 
 # Run on GPU with FP16
-# model = WhisperModel(model_size, device="cuda", compute_type="float16")
+# model_1 = WhisperModel(model_size_1, device="cuda", compute_type="int8")
 
 # or run on GPU with INT8
 # model_1 = WhisperModel(model_size_1, device="cuda", compute_type="int8_float16")
 # or run on CPU with INT8
 
 model_1 = WhisperModel(model_size_1, device="cpu", compute_type="int8")
-model_2 = WhisperModel(model_size_2, device="cpu", compute_type="int8")
 
 
 def transcribe(filepath, used_model):
