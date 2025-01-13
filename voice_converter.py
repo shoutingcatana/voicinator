@@ -7,8 +7,8 @@ model_size_1 = os.environ.get('MODEL_SIZE_STAGE_1', 'small')
 model_size_2 = os.environ.get('MODEL_SIZE_STAGE_2', 'medium')
 
 
-# Run on GPU with FP16
-# model_1 = WhisperModel(model_size_1, device="cuda", compute_type="int8")
+# Run on GPU with FP16 (best for RTX A4000)
+# model_1 = WhisperModel(model_size_1, device="cuda", compute_type="float16")
 
 # or run on GPU with INT8
 # model_1 = WhisperModel(model_size_1, device="cuda", compute_type="int8_float16")

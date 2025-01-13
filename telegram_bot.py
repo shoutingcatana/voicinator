@@ -12,7 +12,7 @@ import pymupdf
 import payment
 import os
 import databank
-
+import text_to_speech as ts
 
 BOT_TOKEN = credentials.get_secret("telegram_token")
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -229,6 +229,13 @@ def convert_pdf_to_images(pdf_path):
         images.append(img)
     return images
 
+
+@bot.message_handler(func=lambda message:True)
+def send_audio(message):
+    text = message.text
+    audio_file = ts.convert(text, filename="test_audio.mp3")
+    with open(audio_file, 'rb') as audio:
+        bot.send_voice(message.chat.id, audio)
 
 @bot.message_handler(content_types=['photo', 'document'])
 def handle_photo(message):

@@ -17,6 +17,7 @@ dependencies = [
     "sqlite-utils>=3.37",
     "Pillow>=10.4.0",
     "pandas>=2.2.3",
+    "gTTs>=2.5.4",
 ]
 
 [tool.pdm.options]
